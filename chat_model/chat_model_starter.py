@@ -58,12 +58,12 @@ def get_schema_info(engine):
 
 # Get user database details
 db_engine = connect_to_db(
-    db_type="mysql",  # Make sure the database type is correct
-    host="localhost",
-    port="3306",
-    dbname="school_record",
-    user="root",
-    password="Kalp@2007"
+    db_type=os.getenv('db_type'),  # Make sure the database type is correct
+    host=os.getenv('host'),
+    port=os.getenv('port'),
+    dbname=os.getenv('dbname'),
+    user=os.getenv('user'),
+    password=os.getenv('password')
 )
 
 # Fetch schema information
