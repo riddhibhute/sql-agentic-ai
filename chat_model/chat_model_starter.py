@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 
 from urllib.parse import quote
 
+import re
+
 load_dotenv()
 
 apiKey = os.getenv('GOOGLE_API_KEY')
@@ -56,6 +58,19 @@ def get_schema_info(engine):
         print(f"❌ Error retrieving schema: {e}")
         return None
 
+
+# Function to execute the generated SQL query
+def execute_query(engine, query):
+    try:
+        with engine.connect() as connection:
+            result = connection.execute(text(query))
+            rows = result.fetchall()
+            return rows
+    except Exception as e:
+        print(f"❌ Error executing SQL query: {e}")
+        return None
+    
+
 # Get user database details
 db_engine = connect_to_db(
     db_type=os.getenv('db_type'),  # Make sure the database type is correct
@@ -69,4 +84,34 @@ db_engine = connect_to_db(
 # Fetch schema information
 schema_info = get_schema_info(db_engine)
 if schema_info:
-    print("📊 Database Schema:", schema_info)
+    # print("📊 Database Schema:", schema_info)
+
+
+      # User's natural language question
+    user_question = "list names of all the students, use sql join"
+    
+
+    # Format the schema info into the prompt
+    prompt = f"""
+    Database Schema: {schema_info}
+    User Question: "{user_question}"
+    Generate an optimized SQL query that works with this schema.
+    """
+
+    # Invoke Gemini to generate SQL
+    result = llm.invoke(prompt)
+
+    # Extract only the SQL query by removing extra explanations
+    cleaned_sql = re.search(r"SELECT.*?;", result.content, re.DOTALL)
+
+    if cleaned_sql:
+        generated_query = cleaned_sql.group(0).strip()
+    else:
+        generated_query = result.content.strip()  # Fallback in case regex fails
+
+    print("\n📝 Final Cleaned SQL Query:\n", generated_query)
+
+
+    # Execute the generated query in the database
+    query_result = execute_query(db_engine, generated_query)
+    print(query_result)
